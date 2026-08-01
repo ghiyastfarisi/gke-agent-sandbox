@@ -1,0 +1,8 @@
+[project]
+name = "run-pysandbox"
+version = "0.1.0"
+description = "Run a command inside a gVisor sandbox on GKE. No LLM."
+requires-python = ">=3.12"
+dependencies = [
+    "k8s-agent-sandbox>=0.5.4",
+]

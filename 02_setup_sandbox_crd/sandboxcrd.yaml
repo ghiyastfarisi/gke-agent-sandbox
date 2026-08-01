@@ -1,0 +1,55 @@
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxTemplate
+metadata:
+  name: python-runtime-template
+  namespace: default
+spec:
+  podTemplate:
+    metadata:
+      labels:
+        sandbox: python-sandbox-example
+    spec:
+      runtimeClassName: gvisor
+      automountServiceAccountToken: false # Required
+      securityContext:
+        runAsNonRoot: true # Required
+      nodeSelector:
+        sandbox.gke.io/runtime: gvisor # Required
+      tolerations:
+      - key: "sandbox.gke.io/runtime"
+        value: "gvisor"
+        effect: "NoSchedule" # Required
+      containers:
+      - name: python-runtime
+        image: registry.k8s.io/agent-sandbox/python-runtime-sandbox:v0.1.0
+        ports:
+        - containerPort: 8888
+        readinessProbe:
+          httpGet:
+            path: "/"
+            port: 8888
+          initialDelaySeconds: 0
+          periodSeconds: 1
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi" # Required
+        securityContext:
+          capabilities:
+            drop: ["ALL"] # Required
+      restartPolicy: "OnFailure"
+---
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxWarmPool
+metadata:
+  name: python-sandbox-warmpool
+  namespace: default
+spec:
+  # >1 so an agent doing several executions in a row always gets a warm pod;
+  # Autopilot needs ~60s to schedule a replacement for each one consumed.
+  replicas: 3
+  sandboxTemplateRef:
+    name: python-runtime-template
